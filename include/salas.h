@@ -77,6 +77,7 @@ public:
     void buscarSala(string codigo) const;
     void removerSala(string codigo);
     void listarTodas() const;
+    int carregarDoArquivo(const string& nomeArquivo); // retorna quantas salas novas entraram
 };
 
 #endif

@@ -1,5 +1,7 @@
 //puxando o "salas.h"
 #include "../include/salas.h" 
+#include <fstream>
+#include <sstream>
 
 //usando a classe mãe
 Sala::Sala(string c, int cap) {
@@ -47,6 +49,7 @@ void SistemaAlocacao::adicionarSala(Sala* nova_sala) {
     string codigo = nova_sala->getCodigo();
     if (tabela_salas.find(codigo) != tabela_salas.end()) {
         cout << "Erro: Sala " << codigo << " ja existe no sistema!" << endl;
+        delete nova_sala; // sem isso a sala duplicada vazava memoria
     } else {
         tabela_salas[codigo] = nova_sala;
         cout << "Sala " << codigo << " adicionada com sucesso!" << endl;
@@ -84,4 +87,46 @@ void SistemaAlocacao::listarTodas() const {
         par.second->exibirDetalhes();
     }
     cout << "===============================\n" << endl;
+}
+
+int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
+    ifstream arquivo(nomeArquivo);
+    if (!arquivo.is_open()) {
+        cout << "Arquivo " << nomeArquivo << " nao encontrado, iniciando sem salas." << endl;
+        return 0;
+    }
+
+    int quantidadeAntes = tabela_salas.size();                        // pra contar so as salas q realmente entraram
+    string linha;
+    int numeroLinha = 0;
+
+    while (getline(arquivo, linha)) {
+        numeroLinha++;
+        if (!linha.empty() && linha.back() == '\r') linha.pop_back(); // csv salvo no windows vem com \r no fim
+        if (linha.empty() || linha[0] == '#') continue;
+
+        stringstream fluxoLinha(linha);
+        string tipo, codigo, capacidadeTexto, extra1, extra2;
+        getline(fluxoLinha, tipo, ',');
+        getline(fluxoLinha, codigo, ',');
+        getline(fluxoLinha, capacidadeTexto, ',');
+        getline(fluxoLinha, extra1, ',');
+        getline(fluxoLinha, extra2, ',');
+
+        try {
+            int capacidade = stoi(capacidadeTexto);                   // estoura exception se vier lixo
+            if (tipo == "T") {
+                adicionarSala(new SalaTeorica(codigo, capacidade, stoi(extra1) == 1));
+            } else if (tipo == "L") {
+                adicionarSala(new Laboratorio(codigo, capacidade, extra1, stoi(extra2)));
+            } else {
+                cout << "Linha " << numeroLinha << ": tipo invalido, ignorando." << endl;
+            }
+        } catch (...) {                                               // linha zoada n derruba o programa
+            cout << "Linha " << numeroLinha << ": formato invalido, ignorando." << endl;
+        }
+    }
+
+    arquivo.close();
+    return tabela_salas.size() - quantidadeAntes;
 }

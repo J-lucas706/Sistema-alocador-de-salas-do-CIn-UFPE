@@ -7,9 +7,13 @@ using namespace std;
 int main() {
     SistemaAlocacao meuSistema;
     int opcao = -1;
+
     cout << "========================================\n";
     cout << "   SISTEMA DE ALOCACAO - CIn UFPE\n";
     cout << "========================================\n";
+
+    int salasCarregadas = meuSistema.carregarDoArquivo("salas.csv");
+    cout << salasCarregadas << " sala(s) carregada(s) do arquivo." << endl;
 
     //mostrando as opções para o usuário
     while (opcao != 0) {
@@ -19,10 +23,10 @@ int main() {
         cout << "[4] Listar Todas as Salas" << endl;
         cout << "[0] Sair do Sistema" << endl;
         cout << "Escolha uma opcao: ";
+        
         //o input do usuário
         cin >> opcao;
 
-        
         if (opcao == 1) {
             int tipoSala;
             cout << "\nQual o tipo de sala?\n[1] Teorica\n[2] Laboratorio\nEscolha: ";
@@ -30,11 +34,12 @@ int main() {
 
             string codigo;
             int capacidade;
+            
             cout << "Digite o codigo da sala (Ex: E6): ";
             cin >> codigo;
             cout << "Digite a capacidade de alunos: ";
             cin >> capacidade;
-            
+
             //perguntando sobre o que mais o aluno deseja na sala teorica
             if (tipoSala == 1) {
                 int respProjetor;
@@ -44,7 +49,7 @@ int main() {
                 
                 meuSistema.adicionarSala(new SalaTeorica(codigo, capacidade, temProjetor));
             } 
-            ////perguntando sobre o que mais o aluno deseja no laboratório 
+            ////perguntando sobre o que mais o aluno deseja no laboratório
             else if (tipoSala == 2) {
                 string tipoLab;
                 int qtdComputadores;
@@ -52,7 +57,7 @@ int main() {
                 cin >> tipoLab;
                 cout << "Quantidade de computadores: ";
                 cin >> qtdComputadores;
-
+                
                 meuSistema.adicionarSala(new Laboratorio(codigo, capacidade, tipoLab, qtdComputadores));
             } else {
                 cout << "Tipo de sala invalido!" << endl;
