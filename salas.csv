@@ -1,0 +1,6 @@
+# tipo,codigo,capacidade,extra1,extra2
+# T = teorica (extra1: projetor 1/0) | L = laboratorio (extra1: Hardware/Software, extra2: qtd computadores)
+T,E6,40,1
+T,E7,35,0
+L,LAB1,30,Software,25
+L,LAB2,20,Hardware,15
