@@ -1,11 +1,44 @@
-//puxando o "salas.h"
+// puxando o "salas.h"
 #include "../include/salas.h" 
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <algorithm>
 
-//usando a classe mãe
+// --- Métodos da classe Reserva ---
+int Reserva::converterParaMinutos(const string& hora) {
+    if (hora.length() < 5) return 0;
+    int h = stoi(hora.substr(0, 2));
+    int m = stoi(hora.substr(3, 2));
+    return h * 60 + m;
+}
+
+Reserva::Reserva(string d, string hi, string hf) {
+    dia = d;
+    hora_inicio = hi;
+    hora_fim = hf;
+    inicio_minutos = converterParaMinutos(hi);
+    fim_minutos = converterParaMinutos(hf);
+}
+
+string Reserva::getDia() const { return dia; }
+string Reserva::getHoraInicio() const { return hora_inicio; }
+string Reserva::getHoraFim() const { return hora_fim; }
+int Reserva::getInicioMinutos() const { return inicio_minutos; }
+int Reserva::getFimMinutos() const { return fim_minutos; }
+
+bool Reserva::temConflito(const string& d, const string& hi, const string& hf) const {
+    if (dia != d) return false;
+    int outro_inicio = converterParaMinutos(hi);
+    int outro_fim = converterParaMinutos(hf);
+    return (inicio_minutos < outro_fim) && (outro_inicio < fim_minutos);
+}
+
+string Reserva::paraCsv(const string& codigoSala) const {
+    return codigoSala + "," + dia + "," + hora_inicio + "," + hora_fim;
+}
+
+// --- Métodos da classe mãe Sala ---
 Sala::Sala(string c, int cap) {
     codigo = c;
     capacidade = cap;
@@ -15,7 +48,36 @@ void Sala::setCodigo(string c) { codigo = c; }
 int Sala::getCapacidade() const { return capacidade; }
 void Sala::setCapacidade(int cap) { capacidade = cap; }
 
-//usando a classe filha das salas teórica
+bool Sala::verificarConflito(const string& dia, const string& h_inicio, const string& h_fim) const {
+    for (const auto& r : reservas) {
+        if (r.temConflito(dia, h_inicio, h_fim)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Sala::adicionarReserva(const Reserva& nova_reserva) {
+    reservas.push_back(nova_reserva);
+}
+
+const vector<Reserva>& Sala::getReservas() const {
+    return reservas;
+}
+
+void Sala::listarReservas() const {
+    if (reservas.empty()) {
+        cout << "  [Sem reservas cadastradas]" << endl;
+    } else {
+        cout << "  [Reservas de Alocacao]:" << endl;
+        for (const auto& r : reservas) {
+            cout << "    - Dia: " << r.getDia() 
+                 << " | Horario: " << r.getHoraInicio() << " as " << r.getHoraFim() << endl;
+        }
+    }
+}
+
+// --- Métodos da classe filha SalaTeorica ---
 SalaTeorica::SalaTeorica(string c, int cap, bool projetor) : Sala(c, cap) { 
     tem_projetor = projetor;
 }
@@ -24,12 +86,13 @@ void SalaTeorica::setTemProjetor(bool p) { tem_projetor = p; }
 void SalaTeorica::exibirDetalhes() const {
     cout << "Sala Teorica: " << codigo << " | Capacidade: " << capacidade 
          << " | Projetor: " << (tem_projetor ? "Sim" : "Nao") << endl;
+    listarReservas();
 }
 string SalaTeorica::paraCsv() const {
     return "T," + codigo + "," + to_string(capacidade) + "," + (tem_projetor ? "1" : "0");
 }
 
-//usando a classe filha dos laboratórios
+// --- Métodos da classe filha Laboratorio ---
 Laboratorio::Laboratorio(string c, int cap, string tipo, int qtd_pcs) : Sala(c, cap) { 
     tipo_lab = tipo;
     qtd_computadores = qtd_pcs;
@@ -42,11 +105,13 @@ void Laboratorio::exibirDetalhes() const {
     cout << "Laboratorio de " << tipo_lab << ": " << codigo 
          << " | Capacidade: " << capacidade 
          << " | Computadores: " << qtd_computadores << endl;
+    listarReservas();
 }
 string Laboratorio::paraCsv() const {
     return "L," + codigo + "," + to_string(capacidade) + "," + tipo_lab + "," + to_string(qtd_computadores);
 }
 
+// --- Métodos da classe SistemaAlocacao ---
 SistemaAlocacao::~SistemaAlocacao() {
     for (auto& par : tabela_salas) {
         delete par.second;
@@ -57,11 +122,11 @@ void SistemaAlocacao::adicionarSala(Sala* nova_sala) {
     string codigo = nova_sala->getCodigo();
     if (tabela_salas.find(codigo) != tabela_salas.end()) {
         cout << "Erro: Sala " << codigo << " ja existe no sistema!" << endl;
-        delete nova_sala; // sem isso a sala duplicada vazava memoria
+        delete nova_sala;
     } else {
         tabela_salas[codigo] = nova_sala;
         cout << "Sala " << codigo << " adicionada com sucesso!" << endl;
-        if (!carregando) salvarNoArquivo(); // durante a leitura do arquivo n pode salvar
+        if (!carregando) salvarSalasNoArquivo();
     }
 }
 
@@ -81,7 +146,8 @@ void SistemaAlocacao::removerSala(string codigo) {
         delete it->second;
         tabela_salas.erase(it);
         cout << "Sala " << codigo << " removida com sucesso!" << endl;
-        salvarNoArquivo();
+        salvarSalasNoArquivo();
+        salvarReservasNoArquivo(); // Atualiza as reservas pois a sala removida continha reservas
     } else {
         cout << "Erro ao remover: Sala " << codigo << " nao encontrada." << endl;
     }
@@ -100,7 +166,7 @@ void SistemaAlocacao::listarTodas() const {
 }
 
 int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
-    arquivo_salas = nomeArquivo;                                      // guarda o nome mesmo se o arquivo n existir, ai ele eh criado no 1o salvamento
+    arquivo_salas = nomeArquivo;
 
     ifstream arquivo(nomeArquivo);
     if (!arquivo.is_open()) {
@@ -108,14 +174,14 @@ int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
         return 0;
     }
 
-    carregando = true;                                                // trava o salvamento enquanto le
-    int quantidadeAntes = tabela_salas.size();                        // pra contar so as salas q realmente entraram
+    carregando = true;
+    int quantidadeAntes = tabela_salas.size();
     string linha;
     int numeroLinha = 0;
 
     while (getline(arquivo, linha)) {
         numeroLinha++;
-        if (!linha.empty() && linha.back() == '\r') linha.pop_back(); // csv salvo no windows vem com \r no fim
+        if (!linha.empty() && linha.back() == '\r') linha.pop_back();
         if (linha.empty() || linha[0] == '#') continue;
 
         stringstream fluxoLinha(linha);
@@ -127,7 +193,7 @@ int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
         getline(fluxoLinha, extra2, ',');
 
         try {
-            int capacidade = stoi(capacidadeTexto);                   // estoura exception se vier lixo
+            int capacidade = stoi(capacidadeTexto);
             if (tipo == "T") {
                 adicionarSala(new SalaTeorica(codigo, capacidade, stoi(extra1) == 1));
             } else if (tipo == "L") {
@@ -135,7 +201,7 @@ int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
             } else {
                 cout << "Linha " << numeroLinha << ": tipo invalido, ignorando." << endl;
             }
-        } catch (...) {                                               // linha zoada n derruba o programa
+        } catch (...) {
             cout << "Linha " << numeroLinha << ": formato invalido, ignorando." << endl;
         }
     }
@@ -145,10 +211,10 @@ int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
     return tabela_salas.size() - quantidadeAntes;
 }
 
-void SistemaAlocacao::salvarNoArquivo() const {
-    if (arquivo_salas.empty()) return;                                // sem arquivo definido n tem onde salvar
+void SistemaAlocacao::salvarSalasNoArquivo() const {
+    if (arquivo_salas.empty()) return;
 
-    ofstream arquivo(arquivo_salas);                                  // abre zerando o arquivo e reescreve tudo
+    ofstream arquivo(arquivo_salas);
     if (!arquivo.is_open()) {
         cout << "Erro: nao foi possivel salvar em " << arquivo_salas << endl;
         return;
@@ -159,9 +225,131 @@ void SistemaAlocacao::salvarNoArquivo() const {
 
     vector<string> codigos;
     for (const auto& par : tabela_salas) codigos.push_back(par.first);
-    sort(codigos.begin(), codigos.end());                             // unordered_map n tem ordem, ordena pro arquivo ficar organizado
+    sort(codigos.begin(), codigos.end());
 
     for (const string& codigo : codigos) {
-        arquivo << tabela_salas.at(codigo)->paraCsv() << endl;        // at() pq o metodo eh const e o [] n funciona aqui
+        arquivo << tabela_salas.at(codigo)->paraCsv() << endl;
+    }
+}
+
+void SistemaAlocacao::realizarReserva() {
+    string codigo;
+    Sala* salaEncontrada = nullptr;
+
+    // --- ETAPA 1: Busca e validação do código da sala na Tabela Hash ---
+    while (true) {
+        cout << "\n=== ALOCACAO / RESERVA DE SALA ===" << endl;
+        cout << "Digite o codigo da sala (ou '0' / 'CANCELAR' para voltar): ";
+        cin >> codigo;
+
+        if (codigo == "0" || codigo == "CANCELAR" || codigo == "cancelar") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+
+        auto it = tabela_salas.find(codigo);
+        if (it != tabela_salas.end()) {
+            salaEncontrada = it->second;
+            cout << "Sala " << codigo << " localizada com sucesso!" << endl;
+            break;
+        }
+
+        cout << "Erro: Sala '" << codigo << "' nao encontrada no sistema. Tente novamente." << endl;
+    }
+
+    // --- ETAPA 2: Validação de Dia, Horários e Checagem de Conflitos ---
+    string dia, hora_inicio, hora_fim;
+
+    while (true) {
+        cout << "\nDigite o dia da reserva (ex: 15/10/2026) ou '0' para cancelar: ";
+        cin >> dia;
+
+        if (dia == "0" || dia == "CANCELAR" || dia == "cancelar") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+
+        cout << "Digite o horario de inicio (formato HH:MM, ex: 14:00): ";
+        cin >> hora_inicio;
+
+        cout << "Digite o horario de fim (formato HH:MM, ex: 16:00): ";
+        cin >> hora_fim;
+
+        if (salaEncontrada->verificarConflito(dia, hora_inicio, hora_fim)) {
+            cout << "\n[ERRO DE CONFLITO] A sala " << codigo 
+                 << " ja possui reserva no dia " << dia 
+                 << " no intervalo de " << hora_inicio << " as " << hora_fim << "." << endl;
+            cout << "Por favor, tente outro dia/horario ou digite '0' para cancelar." << endl;
+        } else {
+            Reserva nova_reserva(dia, hora_inicio, hora_fim);
+            salaEncontrada->adicionarReserva(nova_reserva);
+            cout << "\n[SUCESSO] Reserva realizada com sucesso para a sala " << codigo 
+                 << " no dia " << dia << " (" << hora_inicio << " as " << hora_fim << ")!" << endl;
+            
+            salvarReservasNoArquivo(); // Persiste a nova reserva no arquivo CSV
+            break;
+        }
+    }
+}
+
+int SistemaAlocacao::carregarReservasDoArquivo(const string& nomeArquivo) {
+    arquivo_reservas = nomeArquivo;
+
+    ifstream arquivo(nomeArquivo);
+    if (!arquivo.is_open()) {
+        cout << "Arquivo " << nomeArquivo << " nao encontrado, iniciando sem reservas." << endl;
+        return 0;
+    }
+
+    string linha;
+    int numeroLinha = 0;
+    int reservasCarregadas = 0;
+
+    while (getline(arquivo, linha)) {
+        numeroLinha++;
+        if (!linha.empty() && linha.back() == '\r') linha.pop_back();
+        if (linha.empty() || linha[0] == '#') continue;
+
+        stringstream fluxoLinha(linha);
+        string codigoSala, dia, horaInicio, horaFim;
+        getline(fluxoLinha, codigoSala, ',');
+        getline(fluxoLinha, dia, ',');
+        getline(fluxoLinha, horaInicio, ',');
+        getline(fluxoLinha, horaFim, ',');
+
+        auto it = tabela_salas.find(codigoSala);
+        if (it != tabela_salas.end()) {
+            Reserva novaReserva(dia, horaInicio, horaFim);
+            it->second->adicionarReserva(novaReserva);
+            reservasCarregadas++;
+        } else {
+            cout << "Linha " << numeroLinha << ": Sala '" << codigoSala << "' nao existe, reserva ignorada." << endl;
+        }
+    }
+
+    arquivo.close();
+    return reservasCarregadas;
+}
+
+void SistemaAlocacao::salvarReservasNoArquivo() const {
+    if (arquivo_reservas.empty()) return;
+
+    ofstream arquivo(arquivo_reservas);
+    if (!arquivo.is_open()) {
+        cout << "Erro: nao foi possivel salvar em " << arquivo_reservas << endl;
+        return;
+    }
+
+    arquivo << "# codigo_sala,dia,hora_inicio,hora_fim" << endl;
+
+    vector<string> codigos;
+    for (const auto& par : tabela_salas) codigos.push_back(par.first);
+    sort(codigos.begin(), codigos.end());
+
+    for (const string& codigo : codigos) {
+        const Sala* sala = tabela_salas.at(codigo);
+        for (const auto& r : sala->getReservas()) {
+            arquivo << r.paraCsv(codigo) << endl;
+        }
     }
 }

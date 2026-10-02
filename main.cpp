@@ -15,16 +15,20 @@ int main() {
     int salasCarregadas = meuSistema.carregarDoArquivo("salas.csv");
     cout << salasCarregadas << " sala(s) carregada(s) do arquivo." << endl;
 
-    //mostrando as opções para o usuário
+    int reservasCarregadas = meuSistema.carregarReservasDoArquivo("reservas.csv");
+    cout << reservasCarregadas << " reserva(s) carregada(s) do arquivo." << endl;
+
+    // mostrando as opções para o usuário
     while (opcao != 0) {
         cout << "\n[1] Adicionar Sala" << endl;
         cout << "[2] Buscar Sala" << endl;
         cout << "[3] Remover Sala" << endl;
         cout << "[4] Listar Todas as Salas" << endl;
+        cout << "[5] Reservar Sala" << endl;
         cout << "[0] Sair do Sistema" << endl;
         cout << "Escolha uma opcao: ";
         
-        //o input do usuário
+        // o input do usuário
         cin >> opcao;
 
         if (opcao == 1) {
@@ -40,7 +44,7 @@ int main() {
             cout << "Digite a capacidade de alunos: ";
             cin >> capacidade;
 
-            //perguntando sobre o que mais o aluno deseja na sala teorica
+            // perguntando sobre o que mais o aluno deseja na sala teorica
             if (tipoSala == 1) {
                 int respProjetor;
                 cout << "A sala tem projetor? (1 para Sim, 0 para Nao): ";
@@ -49,7 +53,7 @@ int main() {
                 
                 meuSistema.adicionarSala(new SalaTeorica(codigo, capacidade, temProjetor));
             } 
-            ////perguntando sobre o que mais o aluno deseja no laboratório
+            // perguntando sobre o que mais o aluno deseja no laboratório
             else if (tipoSala == 2) {
                 string tipoLab;
                 int qtdComputadores;
@@ -78,6 +82,9 @@ int main() {
         else if (opcao == 4) {
             meuSistema.listarTodas();
         } 
+        else if (opcao == 5) {
+            meuSistema.realizarReserva();
+        }
         else if (opcao == 0) {
             cout << "\nEncerrando o sistema. Ate logo!" << endl;
         } 
