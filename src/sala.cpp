@@ -2,6 +2,8 @@
 #include "../include/salas.h" 
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <algorithm>
 
 //usando a classe mãe
 Sala::Sala(string c, int cap) {
@@ -23,6 +25,9 @@ void SalaTeorica::exibirDetalhes() const {
     cout << "Sala Teorica: " << codigo << " | Capacidade: " << capacidade 
          << " | Projetor: " << (tem_projetor ? "Sim" : "Nao") << endl;
 }
+string SalaTeorica::paraCsv() const {
+    return "T," + codigo + "," + to_string(capacidade) + "," + (tem_projetor ? "1" : "0");
+}
 
 //usando a classe filha dos laboratórios
 Laboratorio::Laboratorio(string c, int cap, string tipo, int qtd_pcs) : Sala(c, cap) { 
@@ -37,6 +42,9 @@ void Laboratorio::exibirDetalhes() const {
     cout << "Laboratorio de " << tipo_lab << ": " << codigo 
          << " | Capacidade: " << capacidade 
          << " | Computadores: " << qtd_computadores << endl;
+}
+string Laboratorio::paraCsv() const {
+    return "L," + codigo + "," + to_string(capacidade) + "," + tipo_lab + "," + to_string(qtd_computadores);
 }
 
 SistemaAlocacao::~SistemaAlocacao() {
@@ -53,6 +61,7 @@ void SistemaAlocacao::adicionarSala(Sala* nova_sala) {
     } else {
         tabela_salas[codigo] = nova_sala;
         cout << "Sala " << codigo << " adicionada com sucesso!" << endl;
+        if (!carregando) salvarNoArquivo(); // durante a leitura do arquivo n pode salvar
     }
 }
 
@@ -72,6 +81,7 @@ void SistemaAlocacao::removerSala(string codigo) {
         delete it->second;
         tabela_salas.erase(it);
         cout << "Sala " << codigo << " removida com sucesso!" << endl;
+        salvarNoArquivo();
     } else {
         cout << "Erro ao remover: Sala " << codigo << " nao encontrada." << endl;
     }
@@ -90,12 +100,15 @@ void SistemaAlocacao::listarTodas() const {
 }
 
 int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
+    arquivo_salas = nomeArquivo;                                      // guarda o nome mesmo se o arquivo n existir, ai ele eh criado no 1o salvamento
+
     ifstream arquivo(nomeArquivo);
     if (!arquivo.is_open()) {
         cout << "Arquivo " << nomeArquivo << " nao encontrado, iniciando sem salas." << endl;
         return 0;
     }
 
+    carregando = true;                                                // trava o salvamento enquanto le
     int quantidadeAntes = tabela_salas.size();                        // pra contar so as salas q realmente entraram
     string linha;
     int numeroLinha = 0;
@@ -128,5 +141,27 @@ int SistemaAlocacao::carregarDoArquivo(const string& nomeArquivo) {
     }
 
     arquivo.close();
+    carregando = false;
     return tabela_salas.size() - quantidadeAntes;
+}
+
+void SistemaAlocacao::salvarNoArquivo() const {
+    if (arquivo_salas.empty()) return;                                // sem arquivo definido n tem onde salvar
+
+    ofstream arquivo(arquivo_salas);                                  // abre zerando o arquivo e reescreve tudo
+    if (!arquivo.is_open()) {
+        cout << "Erro: nao foi possivel salvar em " << arquivo_salas << endl;
+        return;
+    }
+
+    arquivo << "# tipo,codigo,capacidade,extra1,extra2" << endl;
+    arquivo << "# T = teorica (extra1: projetor 1/0) | L = laboratorio (extra1: Hardware/Software, extra2: qtd computadores)" << endl;
+
+    vector<string> codigos;
+    for (const auto& par : tabela_salas) codigos.push_back(par.first);
+    sort(codigos.begin(), codigos.end());                             // unordered_map n tem ordem, ordena pro arquivo ficar organizado
+
+    for (const string& codigo : codigos) {
+        arquivo << tabela_salas.at(codigo)->paraCsv() << endl;        // at() pq o metodo eh const e o [] n funciona aqui
+    }
 }
