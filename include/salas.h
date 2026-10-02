@@ -29,6 +29,7 @@ public:
     void setCapacidade(int cap);
 
     virtual void exibirDetalhes() const = 0; 
+    virtual string paraCsv() const = 0; // converte a sala em uma linha do arquivo csv
 };
 
 //classe filha das salas teóricas
@@ -43,6 +44,7 @@ public:
     void setTemProjetor(bool p);
 
     void exibirDetalhes() const override;
+    string paraCsv() const override;
 };
 
 //classe filha dos laboratórios
@@ -61,6 +63,7 @@ public:
     void setQtdComputadores(int qtd);
 
     void exibirDetalhes() const override;
+    string paraCsv() const override;
 };
 
 
@@ -68,6 +71,10 @@ class SistemaAlocacao {
 private:
     
     unordered_map<string, Sala*> tabela_salas;
+    string arquivo_salas;      // arquivo onde as salas sao salvas
+    bool carregando = false;   // true enquanto le o arquivo, pra n salvar no meio da leitura
+
+    void salvarNoArquivo() const;
 
 public:
     ~SistemaAlocacao(); //criando o destrutor
