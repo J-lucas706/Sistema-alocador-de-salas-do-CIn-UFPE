@@ -1,0 +1,39 @@
+#include "../include/Sala.h"
+#include <iostream>
+
+Sala::Sala(string c, int cap) {
+    codigo = c;
+    capacidade = cap;
+}
+
+string Sala::getCodigo() const { return codigo; }
+void Sala::setCodigo(string c) { codigo = c; }
+int Sala::getCapacidade() const { return capacidade; }
+void Sala::setCapacidade(int cap) { capacidade = cap; }
+
+bool Sala::verificarConflito(const string& dia, const string& hi, const string& hf) const {
+    for (const auto& r : reservas) {
+        if (r.temConflito(dia, hi, hf)) return true;
+    }
+    return false;
+}
+
+void Sala::adicionarReserva(const Reserva& nova) {
+    reservas.push_back(nova);
+}
+
+const vector<Reserva>& Sala::getReservas() const {
+    return reservas;
+}
+
+void Sala::listarReservas() const {
+    if (reservas.empty()) {
+        cout << "  [Sem reservas cadastradas]" << endl;
+        return;
+    }
+    cout << "  [Reservas de Alocacao]:" << endl;
+    for (const auto& r : reservas) {
+        cout << "    - Dia: " << r.getDia()
+             << " | Horario: " << r.getHoraInicio() << " as " << r.getHoraFim() << endl;
+    }
+}
