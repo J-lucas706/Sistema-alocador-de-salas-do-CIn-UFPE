@@ -20,17 +20,37 @@ bool Reserva::intervaloValido(const string& hi, const string& hf) {
     return converterParaMinutos(hi) < converterParaMinutos(hf);
 }
 
-Reserva::Reserva(string d, string hi, string hf) {
+bool Reserva::idValido(const string& id) {
+    if (id.length() < 2 || id.length() > 10) return false;
+    for (char c : id) {
+        if (!isalnum(static_cast<unsigned char>(c))) return false;
+    }
+    return true;
+}
+
+string Reserva::limparCampoCsv(const string& texto) {
+    string limpo = texto;
+    for (char& c : limpo) {
+        if (c == ',' || c == '\n' || c == '\r') c = ' ';
+    }
+    return limpo;
+}
+
+Reserva::Reserva(string d, string hi, string hf, string nome, string id) {
     dia = d;
     hora_inicio = hi;
     hora_fim = hf;
     inicio_minutos = converterParaMinutos(hi);
     fim_minutos = converterParaMinutos(hf);
+    responsavel_nome = limparCampoCsv(nome);
+    responsavel_id = limparCampoCsv(id);
 }
 
 string Reserva::getDia() const { return dia; }
 string Reserva::getHoraInicio() const { return hora_inicio; }
 string Reserva::getHoraFim() const { return hora_fim; }
+string Reserva::getResponsavelNome() const { return responsavel_nome; }
+string Reserva::getResponsavelId() const { return responsavel_id; }
 
 bool Reserva::temConflito(const string& d, const string& hi, const string& hf) const {
     if (dia != d) return false;
@@ -40,5 +60,6 @@ bool Reserva::temConflito(const string& d, const string& hi, const string& hf) c
 }
 
 string Reserva::paraCsv(const string& codigoSala) const {
-    return codigoSala + "," + dia + "," + hora_inicio + "," + hora_fim;
+    return codigoSala + "," + dia + "," + hora_inicio + "," + hora_fim
+           + "," + responsavel_nome + "," + responsavel_id;
 }

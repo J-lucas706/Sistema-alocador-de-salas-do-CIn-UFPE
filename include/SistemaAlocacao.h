@@ -23,7 +23,8 @@ public:
     Sala* buscarSala(const string& codigo) const; // nullptr se nao existe
     bool removerSala(const string& codigo);
     bool reservar(const string& codigo, const string& dia,
-                  const string& hi, const string& hf); // false se sala nao existe ou ha conflito
+                  const string& hi, const string& hf,
+                  const string& nome = "", const string& id = ""); // false se sala nao existe ou ha conflito
 
     vector<Sala*> getSalasOrdenadas() const;      // ordenadas por codigo
 };

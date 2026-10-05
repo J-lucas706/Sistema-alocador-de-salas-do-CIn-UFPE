@@ -133,7 +133,31 @@ void Menu::reservarSala() {
         cout << "Erro: Sala '" << codigo << "' nao encontrada. Tente novamente." << endl;
     }
 
-    // Etapa 2: dia e horarios
+    // Etapa 2: quem esta alugando (pedido uma unica vez, mesmo se o horario precisar ser refeito)
+    string nome, id;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n'); // descarta o ENTER que sobrou do cin >>
+    while (true) {
+        cout << "\nNome de quem esta alugando (ou '0' para cancelar): ";
+        if (!getline(cin, nome)) exit(0);                  // EOF
+        if (nome == "0") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+        if (!nome.empty()) break;
+        cout << "O nome nao pode ficar vazio." << endl;
+    }
+    while (true) {
+        cout << "ID do CIn/UFPE (ex: fln1) ou '0' para cancelar: ";
+        if (!getline(cin, id)) exit(0);                    // getline: rejeita IDs com espaco
+        if (id == "0") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+        if (Reserva::idValido(id)) break;
+        cout << "ID invalido! Use apenas letras e numeros (2 a 10 caracteres)." << endl;
+    }
+
+    // Etapa 3: dia e horarios
     string dia, hi, hf;
     while (true) {
         cout << "\nDigite o dia da reserva (ex: 15/10/2026) ou '0' para cancelar: ";
@@ -152,8 +176,9 @@ void Menu::reservarSala() {
             continue;
         }
 
-        if (sistema.reservar(codigo, dia, hi, hf)) {
-            cout << "\n[SUCESSO] Sala " << codigo << " reservada em " << dia
+        if (sistema.reservar(codigo, dia, hi, hf, nome, id)) {
+            cout << "\n[SUCESSO] Sala " << codigo << " alugada por " << nome
+                 << " <" << id << "> em " << dia
                  << " (" << hi << " as " << hf << ")!" << endl;
             repo.salvarReservas(sistema);
             return;

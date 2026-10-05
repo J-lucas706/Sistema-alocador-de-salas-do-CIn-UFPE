@@ -34,6 +34,13 @@ void Sala::listarReservas() const {
     cout << "  [Reservas de Alocacao]:" << endl;
     for (const auto& r : reservas) {
         cout << "    - Dia: " << r.getDia()
-             << " | Horario: " << r.getHoraInicio() << " as " << r.getHoraFim() << endl;
+             << " | Horario: " << r.getHoraInicio() << " as " << r.getHoraFim();
+        if (!r.getResponsavelId().empty()) {
+            cout << " | Alugada por " << r.getResponsavelNome()
+                 << " <" << r.getResponsavelId() << ">";
+        } else {
+            cout << " | Responsavel nao informado";  // reserva antiga, sem nome/ID
+        }
+        cout << endl;
     }
 }

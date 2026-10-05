@@ -30,11 +30,12 @@ bool SistemaAlocacao::removerSala(const string& codigo) {
 }
 
 bool SistemaAlocacao::reservar(const string& codigo, const string& dia,
-                               const string& hi, const string& hf) {
+                               const string& hi, const string& hf,
+                               const string& nome, const string& id) {
     Sala* sala = buscarSala(codigo);
     if (sala == nullptr) return false;
     if (sala->verificarConflito(dia, hi, hf)) return false;
-    sala->adicionarReserva(Reserva(dia, hi, hf));
+    sala->adicionarReserva(Reserva(dia, hi, hf, nome, id));
     return true;
 }
 

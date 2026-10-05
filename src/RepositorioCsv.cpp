@@ -69,17 +69,19 @@ int RepositorioCsv::carregarReservas(SistemaAlocacao& sistema) {
         if (linha.empty() || linha[0] == '#') continue;
 
         stringstream fluxo(linha);
-        string codigo, dia, hi, hf;
+        string codigo, dia, hi, hf, nome, id;
         getline(fluxo, codigo, ',');
         getline(fluxo, dia, ',');
         getline(fluxo, hi, ',');
         getline(fluxo, hf, ',');
+        getline(fluxo, nome, ',');  // colunas novas: ficam vazias em linhas antigas
+        getline(fluxo, id, ',');
 
         if (!Reserva::intervaloValido(hi, hf)) {
             cout << "Linha " << numeroLinha << ": horario invalido, reserva ignorada." << endl;
             continue;
         }
-        if (sistema.reservar(codigo, dia, hi, hf)) {
+        if (sistema.reservar(codigo, dia, hi, hf, nome, id)) {
             carregadas++;
         } else {
             cout << "Linha " << numeroLinha << ": sala '" << codigo
@@ -108,7 +110,7 @@ void RepositorioCsv::salvarReservas(const SistemaAlocacao& sistema) const {
         cout << "Erro: nao foi possivel salvar em " << arquivo_reservas << endl;
         return;
     }
-    arquivo << "# codigo_sala,dia,hora_inicio,hora_fim" << endl;
+    arquivo << "# codigo_sala,dia,hora_inicio,hora_fim,nome,id_cin" << endl;
     for (const Sala* sala : sistema.getSalasOrdenadas()) {
         for (const auto& r : sala->getReservas()) {
             arquivo << r.paraCsv(sala->getCodigo()) << endl;
