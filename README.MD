@@ -1,2 +1,3 @@
-#g++ -std=c++ -Wall -Iinclude src/*.cpp -o alocacao
-#.\alocacao
+chmod +x compilar_servidor.sh
+./compilar_servidor.sh
+./servidor_web
