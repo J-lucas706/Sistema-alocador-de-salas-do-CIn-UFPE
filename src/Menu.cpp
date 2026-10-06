@@ -25,6 +25,8 @@ void Menu::exibirOpcoes() const {
     cout << "[3] Remover Sala" << endl;
     cout << "[4] Listar Todas as Salas" << endl;
     cout << "[5] Reservar Sala" << endl;
+    cout << "[6] Editar Sala" << endl;
+    cout << "[7] Editar Reserva" << endl;
     cout << "[0] Sair do Sistema" << endl;
 }
 
@@ -40,6 +42,8 @@ void Menu::executar() {
             case 3: removerSala();   break;
             case 4: listarSalas();   break;
             case 5: reservarSala();  break;
+            case 6: editarSala();    break;
+            case 7: editarReserva(); break;
             case 0: cout << "\nEncerrando o sistema. Ate logo!" << endl; break;
             default: cout << "\nOpcao invalida. Tente novamente." << endl;
         }
@@ -185,5 +189,94 @@ void Menu::reservarSala() {
         }
         cout << "\n[ERRO DE CONFLITO] A sala " << codigo << " ja possui reserva em "
              << dia << " nesse intervalo. Tente outro horario." << endl;
+    }
+}
+
+void Menu::editarSala() {
+    string codigo;
+    cout << "\nDigite o codigo da sala que deseja editar: ";
+    cin >> codigo;
+    Sala* sala = sistema.buscarSala(codigo);
+    if (sala == nullptr) {
+        cout << "Sala " << codigo << " nao encontrada." << endl;
+        return;
+    }
+    cout << "Dados atuais:" << endl;
+    sala->exibirDetalhes();
+
+    int capacidade = lerInt("Nova capacidade de alunos: ");
+    bool projetor = false;
+    string tipoLab;
+    int qtd = 0;
+    if (dynamic_cast<SalaTeorica*>(sala)) {
+        projetor = lerInt("A sala tem projetor? (1 para Sim, 0 para Nao): ") == 1;
+    } else {
+        cout << "Novo tipo do laboratorio (Hardware ou Software): ";
+        cin >> tipoLab;
+        qtd = lerInt("Nova quantidade de computadores: ");
+    }
+
+    if (sistema.atualizarSala(codigo, capacidade, projetor, tipoLab, qtd)) {
+        cout << "Sala " << codigo << " atualizada com sucesso!" << endl;
+        repo.salvarSalas(sistema);
+    } else {
+        cout << "Erro: dados invalidos (capacidade deve ser maior que zero)." << endl;
+    }
+}
+
+void Menu::editarReserva() {
+    string codigo;
+    cout << "\nDigite o codigo da sala da reserva: ";
+    cin >> codigo;
+    Sala* sala = sistema.buscarSala(codigo);
+    if (sala == nullptr) {
+        cout << "Sala " << codigo << " nao encontrada." << endl;
+        return;
+    }
+    const auto& lista = sala->getReservas();
+    if (lista.empty()) {
+        cout << "A sala " << codigo << " nao tem reservas." << endl;
+        return;
+    }
+    for (size_t i = 0; i < lista.size(); i++) {
+        cout << "[" << i + 1 << "] " << lista[i].getDia() << " | " << lista[i].getHoraInicio()
+             << " as " << lista[i].getHoraFim();
+        if (!lista[i].getResponsavelId().empty())
+            cout << " | " << lista[i].getResponsavelNome() << " <" << lista[i].getResponsavelId() << ">";
+        cout << endl;
+    }
+    int n = lerInt("Qual reserva deseja editar? (0 para cancelar): ");
+    if (n == 0) { cout << "Edicao cancelada." << endl; return; }
+    if (n < 1 || n > (int)lista.size()) { cout << "Numero de reserva invalido." << endl; return; }
+
+    Reserva atual = lista[n - 1];  // copia: os valores atuais sao os padroes
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    auto ler = [](const string& rotulo, const string& padrao) {
+        string v;
+        cout << rotulo << " [" << padrao << "] (ENTER mantem): ";
+        if (!getline(cin, v)) exit(0);
+        return v.empty() ? padrao : v;
+    };
+    string nome = ler("Nome", atual.getResponsavelNome());
+    string id   = ler("ID do CIn", atual.getResponsavelId());
+    string dia  = ler("Dia", atual.getDia());
+    string hi   = ler("Inicio (HH:MM)", atual.getHoraInicio());
+    string hf   = ler("Fim (HH:MM)", atual.getHoraFim());
+
+    if (!Reserva::idValido(id)) {
+        cout << "ID invalido! Use apenas letras e numeros (2 a 10 caracteres)." << endl;
+        return;
+    }
+    if (!Reserva::intervaloValido(hi, hf)) {
+        cout << "Horario invalido! Use HH:MM e o inicio deve ser antes do fim." << endl;
+        return;
+    }
+    if (sistema.atualizarReserva(codigo, n - 1, dia, hi, hf, nome, id)) {
+        cout << "\n[SUCESSO] Reserva atualizada: sala " << codigo << " em " << dia
+             << " (" << hi << " as " << hf << ")." << endl;
+        repo.salvarReservas(sistema);
+    } else {
+        cout << "\n[ERRO DE CONFLITO] A sala " << codigo << " ja possui outra reserva em "
+             << dia << " nesse intervalo." << endl;
     }
 }

@@ -63,6 +63,7 @@
         <li>Informe seu nome e o seu ID do CIn (ex: fln1).</li>
         <li>Escolha o dia e o horário, ou use um atalho (manhã, tarde, noite).</li>
         <li>Pronto: a reserva fica escrita na sala, com seu nome, ID e data.</li>
+        <li>Errou algo? Use <b>Editar</b> na sala, ou <b>editar</b> ao lado da reserva (nas Salas ou na Agenda).</li>
       </ol>
     </article>
     <article>
@@ -72,6 +73,8 @@
         <li>O horário usa o formato HH:MM e o início deve ser antes do fim.</li>
         <li>Duas reservas não podem se sobrepor na mesma sala e no mesmo dia.</li>
         <li>Remover uma sala apaga também as reservas dela.</li>
+        <li>O código de uma sala não muda: para trocá-lo, remova a sala e crie outra.</li>
+        <li>Ao editar uma reserva, ela não entra em conflito com ela mesma.</li>
       </ul>
     </article>
     <article>
@@ -95,7 +98,7 @@
 
 <dialog id="dlgSala">
   <form id="formSala">
-    <h2>Adicionar sala</h2>
+    <h2 id="tituloSala">Adicionar sala</h2>
     <label>Tipo
       <select id="sTipo"><option value="T">Teórica</option><option value="L">Laboratório</option></select>
     </label>
@@ -109,7 +112,7 @@
       <label>Quantidade de computadores <input id="sQtd" type="number" min="0" value="0"></label>
     </div>
     <p class="erro" id="erroSala"></p>
-    <div class="fim"><button type="button" class="sec" data-fechar>Cancelar</button><button>Salvar sala</button></div>
+    <div class="fim"><button type="button" class="sec" data-fechar>Cancelar</button><button id="btnSalvarSala">Salvar sala</button></div>
   </form>
 </dialog>
 
@@ -130,7 +133,7 @@
       <label>Fim <input id="rFim" type="time" required></label>
     </div>
     <p class="erro" id="erroReserva"></p>
-    <div class="fim"><button type="button" class="sec" data-fechar>Cancelar</button><button>Reservar</button></div>
+    <div class="fim"><button type="button" class="sec" data-fechar>Cancelar</button><button id="btnSalvarReserva">Reservar</button></div>
   </form>
 </dialog>
 

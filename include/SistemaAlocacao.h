@@ -26,6 +26,15 @@ public:
                   const string& hi, const string& hf,
                   const string& nome = "", const string& id = ""); // false se sala nao existe ou ha conflito
 
+    // UPDATE (o codigo da sala e a identidade e nao muda). Para teorica use 'projetor';
+    // para laboratorio use 'tipoLab' e 'qtd'. false se a sala nao existe ou os dados sao invalidos.
+    bool atualizarSala(const string& codigo, int capacidade, bool projetor,
+                       const string& tipoLab, int qtd);
+    // UPDATE de uma reserva (indice na lista da sala); false se sala/indice nao existe ou ha conflito
+    bool atualizarReserva(const string& codigo, size_t indice, const string& dia,
+                          const string& hi, const string& hf,
+                          const string& nome, const string& id);
+
     vector<Sala*> getSalasOrdenadas() const;      // ordenadas por codigo
 };
 

@@ -20,6 +20,8 @@ private:
     void removerSala();
     void listarSalas();
     void reservarSala();
+    void editarSala();
+    void editarReserva();
 
 public:
     Menu(SistemaAlocacao& s, RepositorioCsv& r);

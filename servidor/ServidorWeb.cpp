@@ -102,14 +102,38 @@ static string salaJson(const Sala* s) {
         j += ",\"tipo\":\"L\",\"tipoLab\":" + jsonStr(l->getTipoLab()) + ",\"computadores\":" + to_string(l->getQtdComputadores());
     j += ",\"reservas\":[";
     bool primeiro = true;
+    int idx = 0;
     for (const auto& r : s->getReservas()) {
         if (!primeiro) j += ",";
         primeiro = false;
-        j += "{\"dia\":" + jsonStr(r.getDia()) + ",\"inicio\":" + jsonStr(r.getHoraInicio()) +
+        j += "{\"indice\":" + to_string(idx++) + ",\"dia\":" + jsonStr(r.getDia()) + ",\"inicio\":" + jsonStr(r.getHoraInicio()) +
              ",\"fim\":" + jsonStr(r.getHoraFim()) + ",\"nome\":" + jsonStr(r.getResponsavelNome()) +
              ",\"id\":" + jsonStr(r.getResponsavelId()) + "}";
     }
     return j + "]}";
+}
+
+// Retorna "" se os dados da reserva sao validos, senao a mensagem de erro
+static string validarReserva(const string& nome, const string& id, const string& dia, const string& hi, const string& hf) {
+    if (nome.empty()) return "O nome nao pode ficar vazio.";
+    if (!Reserva::idValido(id)) return "ID invalido: use apenas letras e numeros (2 a 10 caracteres).";
+    if (!diaValido(dia)) return "Dia invalido (use dd/mm/aaaa).";
+    if (!Reserva::intervaloValido(hi, hf)) return "Horario invalido! Use HH:MM e o inicio deve ser antes do fim.";
+    return "";
+}
+
+// Mensagem de conflito citando quem ja esta com a sala ('ignorar' = indice da propria reserva na edicao)
+static string msgConflito(const Sala* sala, const string& codigo, const string& dia, const string& hi, const string& hf, int ignorar) {
+    string msg = "A sala " + codigo + " ja possui reserva em " + dia + " nesse intervalo";
+    int i = 0;
+    for (const auto& r : sala->getReservas()) {
+        if (i++ == ignorar || !r.temConflito(dia, hi, hf)) continue;
+        msg += " (" + r.getHoraInicio() + " as " + r.getHoraFim();
+        if (!r.getResponsavelId().empty()) msg += ", " + r.getResponsavelNome() + " <" + r.getResponsavelId() + ">";
+        msg += ")";
+        break;
+    }
+    return msg + ".";
 }
 
 static Resp arquivoEstatico(const string& nome, const string& tipo) {
@@ -176,27 +200,52 @@ static Resp tratar(const string& metodo, const string& caminho, const string& co
         return json(200, "{\"ok\":true}");
     }
 
+    if (metodo == "PUT" && caminho.rfind("/api/salas/", 0) == 0) {
+        string resto = caminho.substr(11);
+        size_t p = resto.find("/reservas/");
+        auto f = parseForm(corpo);
+        if (p == string::npos) {  // PUT /api/salas/{codigo}  -> editar sala
+            string codigo = urlDecode(resto);
+            Sala* sala = sis.buscarSala(codigo);
+            if (sala == nullptr) return erro(404, "Sala " + codigo + " nao encontrada.");
+            int cap, qtd = 0;
+            if (!lerInteiro(f["capacidade"], cap) || cap <= 0) return erro(400, "Capacidade invalida.");
+            string tl;
+            if (dynamic_cast<Laboratorio*>(sala)) {
+                tl = trim(Reserva::limparCampoCsv(f["tipoLab"]));
+                if (tl.empty()) return erro(400, "Informe o tipo do laboratorio.");
+                if (!lerInteiro(f["computadores"], qtd) || qtd < 0) return erro(400, "Quantidade de computadores invalida.");
+            }
+            if (!sis.atualizarSala(codigo, cap, f["projetor"] == "1", tl, qtd)) return erro(400, "Dados invalidos.");
+            repo.salvarSalas(sis);
+            return json(200, salaJson(sala));
+        }
+        // PUT /api/salas/{codigo}/reservas/{indice}  -> editar reserva
+        string codigo = urlDecode(resto.substr(0, p));
+        Sala* sala = sis.buscarSala(codigo);
+        if (sala == nullptr) return erro(404, "Sala " + codigo + " nao encontrada.");
+        int indice;
+        if (!lerInteiro(resto.substr(p + 10), indice) || indice < 0 || indice >= (int)sala->getReservas().size())
+            return erro(404, "Reserva nao encontrada.");
+        string dia = f["dia"], hi = f["inicio"], hf = f["fim"], nome = trim(f["nome"]), id = trim(f["id"]);
+        string e = validarReserva(nome, id, dia, hi, hf);
+        if (!e.empty()) return erro(400, e);
+        if (!sis.atualizarReserva(codigo, (size_t)indice, dia, hi, hf, nome, id))
+            return erro(409, msgConflito(sala, codigo, dia, hi, hf, indice));
+        repo.salvarReservas(sis);
+        return json(200, salaJson(sala));
+    }
+
     if (metodo == "POST" && caminho == "/api/reservas") {
         auto f = parseForm(corpo);
         string codigo = f["codigo"], dia = f["dia"], hi = f["inicio"], hf = f["fim"];
         string nome = trim(f["nome"]), id = trim(f["id"]);
         Sala* sala = sis.buscarSala(codigo);
         if (sala == nullptr) return erro(404, "Sala '" + codigo + "' nao encontrada.");
-        if (nome.empty()) return erro(400, "O nome nao pode ficar vazio.");
-        if (!Reserva::idValido(id)) return erro(400, "ID invalido: use apenas letras e numeros (2 a 10 caracteres).");
-        if (!diaValido(dia)) return erro(400, "Dia invalido (use dd/mm/aaaa).");
-        if (!Reserva::intervaloValido(hi, hf)) return erro(400, "Horario invalido! Use HH:MM e o inicio deve ser antes do fim.");
+        string e = validarReserva(nome, id, dia, hi, hf);
+        if (!e.empty()) return erro(400, e);
         if (!sis.reservar(codigo, dia, hi, hf, nome, id)) {
-            string msg = "A sala " + codigo + " ja possui reserva em " + dia + " nesse intervalo";
-            for (const auto& r : sala->getReservas()) {
-                if (r.temConflito(dia, hi, hf)) {
-                    msg += " (" + r.getHoraInicio() + " as " + r.getHoraFim();
-                    if (!r.getResponsavelId().empty()) msg += ", " + r.getResponsavelNome() + " <" + r.getResponsavelId() + ">";
-                    msg += ")";
-                    break;
-                }
-            }
-            return erro(409, msg + ".");
+            return erro(409, msgConflito(sala, codigo, dia, hi, hf, -1));
         }
         repo.salvarReservas(sis);
         return json(201, salaJson(sala));

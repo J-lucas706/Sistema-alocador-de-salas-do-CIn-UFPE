@@ -1,4 +1,6 @@
 #include "../include/SistemaAlocacao.h"
+#include "../include/SalaTeorica.h"
+#include "../include/Laboratorio.h"
 #include <algorithm>
 
 SistemaAlocacao::~SistemaAlocacao() {
@@ -37,6 +39,29 @@ bool SistemaAlocacao::reservar(const string& codigo, const string& dia,
     if (sala->verificarConflito(dia, hi, hf)) return false;
     sala->adicionarReserva(Reserva(dia, hi, hf, nome, id));
     return true;
+}
+
+bool SistemaAlocacao::atualizarSala(const string& codigo, int capacidade, bool projetor,
+                                    const string& tipoLab, int qtd) {
+    Sala* sala = buscarSala(codigo);
+    if (sala == nullptr || capacidade <= 0) return false;
+    if (auto t = dynamic_cast<SalaTeorica*>(sala)) {
+        t->setTemProjetor(projetor);
+    } else if (auto l = dynamic_cast<Laboratorio*>(sala)) {
+        if (tipoLab.empty() || qtd < 0) return false;
+        l->setTipoLab(tipoLab);
+        l->setQtdComputadores(qtd);
+    }
+    sala->setCapacidade(capacidade);
+    return true;
+}
+
+bool SistemaAlocacao::atualizarReserva(const string& codigo, size_t indice, const string& dia,
+                                       const string& hi, const string& hf,
+                                       const string& nome, const string& id) {
+    Sala* sala = buscarSala(codigo);
+    if (sala == nullptr) return false;
+    return sala->atualizarReserva(indice, Reserva(dia, hi, hf, nome, id));
 }
 
 vector<Sala*> SistemaAlocacao::getSalasOrdenadas() const {

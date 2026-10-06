@@ -24,6 +24,8 @@ public:
 
     bool verificarConflito(const string& dia, const string& hi, const string& hf) const;
     void adicionarReserva(const Reserva& nova);
+    // UPDATE: substitui a reserva do indice dado; false se o indice nao existe ou conflita com outra reserva
+    bool atualizarReserva(size_t indice, const Reserva& nova);
     const vector<Reserva>& getReservas() const;
     void listarReservas() const;
 

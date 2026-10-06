@@ -71,7 +71,7 @@ button.link { background: none; border: 0; color: var(--teo); padding: 0; text-a
 .dia { margin-bottom: 22px; }
 .dia h3 { margin: 0 0 6px; font-size: 1.05rem; }
 .dia h3 .pill { margin-left: 8px; color: var(--busy); }
-.linha-ag { display: grid; grid-template-columns: 130px 70px 1fr; gap: 12px; align-items: baseline; background: var(--pap); border-left: 5px solid var(--teo); padding: 9px 14px; margin-bottom: 4px; }
+.linha-ag { display: grid; grid-template-columns: 130px 70px 1fr auto; gap: 12px; align-items: baseline; background: var(--pap); border-left: 5px solid var(--teo); padding: 9px 14px; margin-bottom: 4px; }
 .linha-ag.L { border-left-color: var(--lab); }
 .linha-ag time { font-weight: 700; font-variant-numeric: tabular-nums; }
 .linha-ag b { font-size: 1.1rem; }
@@ -104,7 +104,7 @@ label.linha input { width: auto; margin: 0; }
 
 @media (max-width: 720px) {
   .numeros { grid-template-columns: 1fr 1fr; gap: 16px 0; }
-  .linha-ag { grid-template-columns: 1fr 60px; } .linha-ag span { grid-column: 1 / -1; }
+  .linha-ag { grid-template-columns: 1fr 60px; } .linha-ag span, .linha-ag button { grid-column: 1 / -1; justify-self: start; }
   .abas button { padding: 12px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { dialog[open] { animation: none; } }

@@ -22,6 +22,16 @@ void Sala::adicionarReserva(const Reserva& nova) {
     reservas.push_back(nova);
 }
 
+bool Sala::atualizarReserva(size_t indice, const Reserva& nova) {
+    if (indice >= reservas.size()) return false;
+    for (size_t i = 0; i < reservas.size(); i++) {
+        if (i == indice) continue;  // a propria reserva nao conta como conflito
+        if (reservas[i].temConflito(nova.getDia(), nova.getHoraInicio(), nova.getHoraFim())) return false;
+    }
+    reservas[indice] = nova;
+    return true;
+}
+
 const vector<Reserva>& Sala::getReservas() const {
     return reservas;
 }
