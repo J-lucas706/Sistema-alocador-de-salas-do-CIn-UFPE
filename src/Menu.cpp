@@ -1,0 +1,282 @@
+#include "../include/Menu.h"
+#include "../include/SalaTeorica.h"
+#include "../include/Laboratorio.h"
+#include <iostream>
+#include <limits>
+
+Menu::Menu(SistemaAlocacao& s, RepositorioCsv& r) : sistema(s), repo(r) {}
+
+// Le um inteiro e repete enquanto a entrada for invalida
+int Menu::lerInt(const string& mensagem) {
+    int valor;
+    while (true) {
+        cout << mensagem;
+        if (cin >> valor) return valor;
+        if (cin.eof()) exit(0);
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Entrada invalida, digite um numero." << endl;
+    }
+}
+
+void Menu::exibirOpcoes() const {
+    cout << "\n[1] Adicionar Sala" << endl;
+    cout << "[2] Buscar Sala" << endl;
+    cout << "[3] Remover Sala" << endl;
+    cout << "[4] Listar Todas as Salas" << endl;
+    cout << "[5] Reservar Sala" << endl;
+    cout << "[6] Editar Sala" << endl;
+    cout << "[7] Editar Reserva" << endl;
+    cout << "[0] Sair do Sistema" << endl;
+}
+
+void Menu::executar() {
+    int opcao = -1;
+    while (opcao != 0) {
+        exibirOpcoes();
+        opcao = lerInt("Escolha uma opcao: ");
+
+        switch (opcao) {
+            case 1: adicionarSala(); break;
+            case 2: buscarSala();    break;
+            case 3: removerSala();   break;
+            case 4: listarSalas();   break;
+            case 5: reservarSala();  break;
+            case 6: editarSala();    break;
+            case 7: editarReserva(); break;
+            case 0: cout << "\nEncerrando o sistema. Ate logo!" << endl; break;
+            default: cout << "\nOpcao invalida. Tente novamente." << endl;
+        }
+    }
+}
+
+void Menu::adicionarSala() {
+    int tipo = lerInt("\nQual o tipo de sala?\n[1] Teorica\n[2] Laboratorio\nEscolha: ");
+    if (tipo != 1 && tipo != 2) {
+        cout << "Tipo de sala invalido!" << endl;
+        return;
+    }
+
+    string codigo;
+    cout << "Digite o codigo da sala (Ex: E6): ";
+    cin >> codigo;
+    int capacidade = lerInt("Digite a capacidade de alunos: ");
+
+    Sala* nova = nullptr;
+    if (tipo == 1) {
+        int proj = lerInt("A sala tem projetor? (1 para Sim, 0 para Nao): ");
+        nova = new SalaTeorica(codigo, capacidade, proj == 1);
+    } else {
+        string tipoLab;
+        cout << "Qual o tipo do laboratorio? (Hardware ou Software): ";
+        cin >> tipoLab;
+        int qtd = lerInt("Quantidade de computadores: ");
+        nova = new Laboratorio(codigo, capacidade, tipoLab, qtd);
+    }
+
+    if (sistema.adicionarSala(nova)) {
+        cout << "Sala " << codigo << " adicionada com sucesso!" << endl;
+        repo.salvarSalas(sistema);
+    } else {
+        cout << "Erro: Sala " << codigo << " ja existe no sistema!" << endl;
+    }
+}
+
+void Menu::buscarSala() {
+    string codigo;
+    cout << "\nDigite o codigo da sala que deseja buscar: ";
+    cin >> codigo;
+
+    Sala* sala = sistema.buscarSala(codigo);
+    if (sala != nullptr) {
+        cout << "Sala encontrada:" << endl;
+        sala->exibirDetalhes();
+    } else {
+        cout << "Sala " << codigo << " nao encontrada." << endl;
+    }
+}
+
+void Menu::removerSala() {
+    string codigo;
+    cout << "\nDigite o codigo da sala que deseja remover: ";
+    cin >> codigo;
+
+    if (sistema.removerSala(codigo)) {
+        cout << "Sala " << codigo << " removida com sucesso!" << endl;
+        repo.salvarSalas(sistema);
+        repo.salvarReservas(sistema); // a sala removida tinha reservas
+    } else {
+        cout << "Erro ao remover: Sala " << codigo << " nao encontrada." << endl;
+    }
+}
+
+void Menu::listarSalas() {
+    cout << "\n=== Lista de Todas as Salas ===" << endl;
+    auto salas = sistema.getSalasOrdenadas();
+    if (salas.empty()) {
+        cout << "Nenhuma sala cadastrada." << endl;
+        return;
+    }
+    for (const Sala* s : salas) s->exibirDetalhes();
+    cout << "===============================" << endl;
+}
+
+void Menu::reservarSala() {
+    string codigo;
+    cout << "\n=== ALOCACAO / RESERVA DE SALA ===" << endl;
+
+    // Etapa 1: escolher a sala
+    while (true) {
+        cout << "Digite o codigo da sala (ou '0' para voltar): ";
+        cin >> codigo;
+        if (codigo == "0") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+        if (sistema.buscarSala(codigo) != nullptr) break;
+        cout << "Erro: Sala '" << codigo << "' nao encontrada. Tente novamente." << endl;
+    }
+
+    // Etapa 2: quem esta alugando (pedido uma unica vez, mesmo se o horario precisar ser refeito)
+    string nome, id;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n'); // descarta o ENTER que sobrou do cin >>
+    while (true) {
+        cout << "\nNome de quem esta alugando (ou '0' para cancelar): ";
+        if (!getline(cin, nome)) exit(0);                  // EOF
+        if (nome == "0") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+        if (!nome.empty()) break;
+        cout << "O nome nao pode ficar vazio." << endl;
+    }
+    while (true) {
+        cout << "ID do CIn/UFPE (ex: fln1) ou '0' para cancelar: ";
+        if (!getline(cin, id)) exit(0);                    // getline: rejeita IDs com espaco
+        if (id == "0") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+        if (Reserva::idValido(id)) break;
+        cout << "ID invalido! Use apenas letras e numeros (2 a 10 caracteres)." << endl;
+    }
+
+    // Etapa 3: dia e horarios
+    string dia, hi, hf;
+    while (true) {
+        cout << "\nDigite o dia da reserva (ex: 15/10/2026) ou '0' para cancelar: ";
+        cin >> dia;
+        if (dia == "0") {
+            cout << "Operacao de reserva cancelada." << endl;
+            return;
+        }
+        cout << "Horario de inicio (HH:MM): ";
+        cin >> hi;
+        cout << "Horario de fim (HH:MM): ";
+        cin >> hf;
+
+        if (!Reserva::intervaloValido(hi, hf)) {
+            cout << "Horario invalido! Use HH:MM e o inicio deve ser antes do fim." << endl;
+            continue;
+        }
+
+        if (sistema.reservar(codigo, dia, hi, hf, nome, id)) {
+            cout << "\n[SUCESSO] Sala " << codigo << " alugada por " << nome
+                 << " <" << id << "> em " << dia
+                 << " (" << hi << " as " << hf << ")!" << endl;
+            repo.salvarReservas(sistema);
+            return;
+        }
+        cout << "\n[ERRO DE CONFLITO] A sala " << codigo << " ja possui reserva em "
+             << dia << " nesse intervalo. Tente outro horario." << endl;
+    }
+}
+
+void Menu::editarSala() {
+    string codigo;
+    cout << "\nDigite o codigo da sala que deseja editar: ";
+    cin >> codigo;
+    Sala* sala = sistema.buscarSala(codigo);
+    if (sala == nullptr) {
+        cout << "Sala " << codigo << " nao encontrada." << endl;
+        return;
+    }
+    cout << "Dados atuais:" << endl;
+    sala->exibirDetalhes();
+
+    int capacidade = lerInt("Nova capacidade de alunos: ");
+    bool projetor = false;
+    string tipoLab;
+    int qtd = 0;
+    if (dynamic_cast<SalaTeorica*>(sala)) {
+        projetor = lerInt("A sala tem projetor? (1 para Sim, 0 para Nao): ") == 1;
+    } else {
+        cout << "Novo tipo do laboratorio (Hardware ou Software): ";
+        cin >> tipoLab;
+        qtd = lerInt("Nova quantidade de computadores: ");
+    }
+
+    if (sistema.atualizarSala(codigo, capacidade, projetor, tipoLab, qtd)) {
+        cout << "Sala " << codigo << " atualizada com sucesso!" << endl;
+        repo.salvarSalas(sistema);
+    } else {
+        cout << "Erro: dados invalidos (capacidade deve ser maior que zero)." << endl;
+    }
+}
+
+void Menu::editarReserva() {
+    string codigo;
+    cout << "\nDigite o codigo da sala da reserva: ";
+    cin >> codigo;
+    Sala* sala = sistema.buscarSala(codigo);
+    if (sala == nullptr) {
+        cout << "Sala " << codigo << " nao encontrada." << endl;
+        return;
+    }
+    const auto& lista = sala->getReservas();
+    if (lista.empty()) {
+        cout << "A sala " << codigo << " nao tem reservas." << endl;
+        return;
+    }
+    for (size_t i = 0; i < lista.size(); i++) {
+        cout << "[" << i + 1 << "] " << lista[i].getDia() << " | " << lista[i].getHoraInicio()
+             << " as " << lista[i].getHoraFim();
+        if (!lista[i].getResponsavelId().empty())
+            cout << " | " << lista[i].getResponsavelNome() << " <" << lista[i].getResponsavelId() << ">";
+        cout << endl;
+    }
+    int n = lerInt("Qual reserva deseja editar? (0 para cancelar): ");
+    if (n == 0) { cout << "Edicao cancelada." << endl; return; }
+    if (n < 1 || n > (int)lista.size()) { cout << "Numero de reserva invalido." << endl; return; }
+
+    Reserva atual = lista[n - 1];  // copia: os valores atuais sao os padroes
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    auto ler = [](const string& rotulo, const string& padrao) {
+        string v;
+        cout << rotulo << " [" << padrao << "] (ENTER mantem): ";
+        if (!getline(cin, v)) exit(0);
+        return v.empty() ? padrao : v;
+    };
+    string nome = ler("Nome", atual.getResponsavelNome());
+    string id   = ler("ID do CIn", atual.getResponsavelId());
+    string dia  = ler("Dia", atual.getDia());
+    string hi   = ler("Inicio (HH:MM)", atual.getHoraInicio());
+    string hf   = ler("Fim (HH:MM)", atual.getHoraFim());
+
+    if (!Reserva::idValido(id)) {
+        cout << "ID invalido! Use apenas letras e numeros (2 a 10 caracteres)." << endl;
+        return;
+    }
+    if (!Reserva::intervaloValido(hi, hf)) {
+        cout << "Horario invalido! Use HH:MM e o inicio deve ser antes do fim." << endl;
+        return;
+    }
+    if (sistema.atualizarReserva(codigo, n - 1, dia, hi, hf, nome, id)) {
+        cout << "\n[SUCESSO] Reserva atualizada: sala " << codigo << " em " << dia
+             << " (" << hi << " as " << hf << ")." << endl;
+        repo.salvarReservas(sistema);
+    } else {
+        cout << "\n[ERRO DE CONFLITO] A sala " << codigo << " ja possui outra reserva em "
+             << dia << " nesse intervalo." << endl;
+    }
+}

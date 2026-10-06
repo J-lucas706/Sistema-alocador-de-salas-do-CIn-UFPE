@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alocação de Salas · CIn UFPE</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topo">
+  <div class="topo-in">
+    <div>
+      <h1>Alocação de Salas</h1>
+      <p class="sub">Centro de Informática · UFPE</p>
+    </div>
+    <div class="topo-dir">
+      <span id="status" class="pill">Conectando…</span>
+      <span id="hoje" class="data"></span>
+      <button id="tema" class="sec" aria-label="Alternar tema claro/escuro">Tema</button>
+    </div>
+  </div>
+</header>
+
+<section class="numeros" id="numeros" aria-label="Resumo"></section>
+
+<nav class="abas" role="tablist" aria-label="Seções">
+  <button role="tab" class="ativa" data-aba="salas">Salas</button>
+  <button role="tab" data-aba="agenda">Agenda</button>
+  <button role="tab" data-aba="ajuda">Como usar</button>
+</nav>
+
+<main>
+  <section id="aba-salas">
+    <div class="barra">
+      <input id="busca" type="search" placeholder="Buscar sala pelo código (ex: E4)" aria-label="Buscar sala">
+      <div class="chips" id="chips" role="group" aria-label="Filtrar por tipo">
+        <button class="chip on" data-tipo="">Todas</button>
+        <button class="chip" data-tipo="T">Teóricas</button>
+        <button class="chip" data-tipo="L">Laboratórios</button>
+      </div>
+      <select id="ordem" aria-label="Ordenar">
+        <option value="codigo">Ordenar por código</option>
+        <option value="cap">Maior capacidade</option>
+      </select>
+      <button id="btnNovaSala">Adicionar sala</button>
+    </div>
+    <div id="salas" class="grade"></div>
+  </section>
+
+  <section id="aba-agenda" hidden>
+    <div class="barra">
+      <h2 class="tit">Reservas por dia</h2>
+      <label class="linha"><input id="passadas" type="checkbox"> Incluir dias passados</label>
+    </div>
+    <div id="agenda"></div>
+  </section>
+
+  <section id="aba-ajuda" hidden class="ajuda">
+    <article>
+      <h2>Como reservar</h2>
+      <ol>
+        <li>Na aba <b>Salas</b>, escolha a sala e clique em <b>Reservar</b>.</li>
+        <li>Informe seu nome e o seu ID do CIn (ex: fln1).</li>
+        <li>Escolha o dia e o horário, ou use um atalho (manhã, tarde, noite).</li>
+        <li>Pronto: a reserva fica escrita na sala, com seu nome, ID e data.</li>
+        <li>Errou algo? Use <b>Editar</b> na sala, ou <b>editar</b> ao lado da reserva (nas Salas ou na Agenda).</li>
+      </ol>
+    </article>
+    <article>
+      <h2>Regras do sistema</h2>
+      <ul>
+        <li>O ID aceita só letras e números, de 2 a 10 caracteres.</li>
+        <li>O horário usa o formato HH:MM e o início deve ser antes do fim.</li>
+        <li>Duas reservas não podem se sobrepor na mesma sala e no mesmo dia.</li>
+        <li>Remover uma sala apaga também as reservas dela.</li>
+        <li>O código de uma sala não muda: para trocá-lo, remova a sala e crie outra.</li>
+        <li>Ao editar uma reserva, ela não entra em conflito com ela mesma.</li>
+      </ul>
+    </article>
+    <article>
+      <h2>Legenda</h2>
+      <ul>
+        <li><span class="amostra teo"></span> Sala teórica, com ou sem projetor.</li>
+        <li><span class="amostra lab"></span> Laboratório de Hardware ou Software.</li>
+        <li><span class="pill free">Livre hoje</span> Nenhuma reserva para a data de hoje.</li>
+        <li><span class="pill busy">Ocupada hoje</span> Há reserva hoje; o primeiro horário aparece.</li>
+      </ul>
+    </article>
+    <article>
+      <h2>Onde ficam os dados</h2>
+      <p>Tudo é processado pelo programa em C++, que grava em <code>data/salas.csv</code> e <code>data/reservas.csv</code>. Esta página só mostra e envia informações: se o servidor for fechado, ela avisa que está offline.</p>
+    </article>
+  </section>
+</main>
+
+<footer>Sistema de Alocação · Projeto de EDOO · CIn UFPE</footer>
+<div id="toasts" aria-live="polite"></div>
+
+<dialog id="dlgSala">
+  <form id="formSala">
+    <h2 id="tituloSala">Adicionar sala</h2>
+    <label>Tipo
+      <select id="sTipo"><option value="T">Teórica</option><option value="L">Laboratório</option></select>
+    </label>
+    <label>Código <input id="sCodigo" required maxlength="10" placeholder="Ex: E6"></label>
+    <label>Capacidade de alunos <input id="sCap" type="number" min="1" required></label>
+    <label id="boxProj" class="linha"><input id="sProj" type="checkbox"> Tem projetor</label>
+    <div id="boxLab" hidden>
+      <label>Tipo do laboratório
+        <select id="sTipoLab"><option>Hardware</option><option>Software</option></select>
+      </label>
+      <label>Quantidade de computadores <input id="sQtd" type="number" min="0" value="0"></label>
+    </div>
+    <p class="erro" id="erroSala"></p>
+    <div class="fim"><button type="button" class="sec" data-fechar>Cancelar</button><button id="btnSalvarSala">Salvar sala</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgReserva">
+  <form id="formReserva">
+    <h2 id="tituloReserva">Reservar sala</h2>
+    <p id="resumoReserva" class="resumo"></p>
+    <label>Nome de quem está alugando <input id="rNome" required></label>
+    <label>ID do CIn/UFPE <input id="rId" required maxlength="10" placeholder="Ex: fln1"></label>
+    <label>Dia <input id="rDia" type="date" required></label>
+    <div class="atalhos" aria-label="Atalhos de horário">
+      <button type="button" class="chip" data-ini="08:00" data-fim="12:00">Manhã 08–12</button>
+      <button type="button" class="chip" data-ini="14:00" data-fim="18:00">Tarde 14–18</button>
+      <button type="button" class="chip" data-ini="18:00" data-fim="22:00">Noite 18–22</button>
+    </div>
+    <div class="duas">
+      <label>Início <input id="rIni" type="time" required></label>
+      <label>Fim <input id="rFim" type="time" required></label>
+    </div>
+    <p class="erro" id="erroReserva"></p>
+    <div class="fim"><button type="button" class="sec" data-fechar>Cancelar</button><button id="btnSalvarReserva">Reservar</button></div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
