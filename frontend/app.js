@@ -59,7 +59,7 @@ function renderSalas() {
     const st = hoje.length ? `<span class="pill busy">Ocupada hoje · ${esc(hoje[0].inicio)}–${esc(hoje[0].fim)}</span>` : `<span class="pill free">Livre hoje</span>`;
     const det = s.tipo === "T" ? `${s.capacidade} alunos · Projetor: ${s.projetor ? "sim" : "não"}` : `${s.capacidade} alunos · ${s.computadores} computadores`;
     const itens = futuras.slice(0, 3).map(r => `<li><time>${esc(r.dia)} · ${esc(r.inicio)}–${esc(r.fim)}</time><br>` +
-      (r.id ? `Alugada por ${esc(r.nome)} &lt;${esc(r.id)}&gt;` : "Responsável não informado") + ` <button class="link" data-act="editres" data-cod="${esc(s.codigo)}" data-i="${r.indice}">editar</button></li>`).join("");
+      (r.id ? `Alugada por ${esc(r.nome)} &lt;${esc(r.id)}&gt;` : "Responsável não informado") + ` <button class="link" data-act="editres" data-cod="${esc(s.codigo)}" data-i="${r.indice}">editar</button> <button class="link" data-act="cancelres" data-cod="${esc(s.codigo)}" data-i="${r.indice}">cancelar</button></li>`).join("");
     const mais = futuras.length > 3 ? `<button class="link" data-act="agenda">+ ${futuras.length - 3} na Agenda</button>` : "";
     const vazio = !futuras.length ? `<p class="vazio">Sem reservas futuras${antigas ? ` (${antigas} anterior${antigas > 1 ? "es" : ""})` : ""}.</p>` : "";
     return `<article class="sala ${s.tipo}">
@@ -79,7 +79,7 @@ function renderAgenda() {
   const dias = [...new Set(lista.map(r => r.dia))];
   $("#agenda").innerHTML = dias.map(d => `<div class="dia"><h3>${nomeDia(d)}, ${esc(d)}${d === HOJE ? '<span class="pill">Hoje</span>' : ""}</h3>` +
     lista.filter(r => r.dia === d).map(r => `<div class="linha-ag ${r.sala.tipo}"><time>${esc(r.inicio)}–${esc(r.fim)}</time><b>${esc(r.sala.codigo)}</b>` +
-      `<span>${r.id ? `${esc(r.nome)} &lt;${esc(r.id)}&gt;` : "Responsável não informado"}</span><button class="link" data-act="editres" data-cod="${esc(r.sala.codigo)}" data-i="${r.indice}">editar</button></div>`).join("") + `</div>`).join("");
+      `<span>${r.id ? `${esc(r.nome)} &lt;${esc(r.id)}&gt;` : "Responsável não informado"}</span><button class="link" data-act="editres" data-cod="${esc(r.sala.codigo)}" data-i="${r.indice}">editar</button><button class="link" data-act="cancelres" data-cod="${esc(r.sala.codigo)}" data-i="${r.indice}">cancelar</button></div>`).join("") + `</div>`).join("");
 }
 
 // ---------- navegacao e filtros ----------
@@ -160,6 +160,15 @@ function abrirEdicaoReserva(cod, i) {
   $("#btnSalvarReserva").textContent = "Salvar alterações"; $("#dlgReserva").showModal();
 }
 document.addEventListener("click", e => { const b = e.target.closest("button[data-act=editres]"); if (b) abrirEdicaoReserva(b.dataset.cod, +b.dataset.i); });
+
+// ---------- cancelar reserva ----------
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button[data-act=cancelres]"); if (!b) return;
+  const s = salas.find(x => x.codigo === b.dataset.cod), r = s && s.reservas.find(x => x.indice === +b.dataset.i); if (!r) return;
+  if (!confirm(`Cancelar a reserva da sala ${s.codigo} em ${r.dia}, ${r.inicio}–${r.fim}?`)) return;
+  try { await api("DELETE", `/api/salas/${encodeURIComponent(s.codigo)}/reservas/${r.indice}`); await carregar(); toast(`Reserva da sala ${s.codigo} cancelada.`); }
+  catch (err) { toast(err.message, true); }
+});
 
 // ---------- reservar ----------
 $$(".atalhos .chip").forEach(c => c.addEventListener("click", () => { $("#rIni").value = c.dataset.ini; $("#rFim").value = c.dataset.fim; }));

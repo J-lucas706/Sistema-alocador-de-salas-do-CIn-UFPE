@@ -35,6 +35,9 @@ public:
                           const string& hi, const string& hf,
                           const string& nome, const string& id);
 
+    // DELETE de uma reserva (indice na lista da sala); false se sala/indice nao existe
+    bool removerReserva(const string& codigo, size_t indice);
+
     vector<Sala*> getSalasOrdenadas() const;      // ordenadas por codigo
 };
 

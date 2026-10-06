@@ -64,6 +64,12 @@ bool SistemaAlocacao::atualizarReserva(const string& codigo, size_t indice, cons
     return sala->atualizarReserva(indice, Reserva(dia, hi, hf, nome, id));
 }
 
+bool SistemaAlocacao::removerReserva(const string& codigo, size_t indice) {
+    Sala* sala = buscarSala(codigo);
+    if (sala == nullptr) return false;
+    return sala->removerReserva(indice);
+}
+
 vector<Sala*> SistemaAlocacao::getSalasOrdenadas() const {
     vector<Sala*> lista;
     for (const auto& par : tabela_salas) lista.push_back(par.second);

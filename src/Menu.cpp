@@ -27,6 +27,7 @@ void Menu::exibirOpcoes() const {
     cout << "[5] Reservar Sala" << endl;
     cout << "[6] Editar Sala" << endl;
     cout << "[7] Editar Reserva" << endl;
+    cout << "[8] Cancelar Reserva" << endl;
     cout << "[0] Sair do Sistema" << endl;
 }
 
@@ -44,6 +45,7 @@ void Menu::executar() {
             case 5: reservarSala();  break;
             case 6: editarSala();    break;
             case 7: editarReserva(); break;
+            case 8: cancelarReserva(); break;
             case 0: cout << "\nEncerrando o sistema. Ate logo!" << endl; break;
             default: cout << "\nOpcao invalida. Tente novamente." << endl;
         }
@@ -238,13 +240,7 @@ void Menu::editarReserva() {
         cout << "A sala " << codigo << " nao tem reservas." << endl;
         return;
     }
-    for (size_t i = 0; i < lista.size(); i++) {
-        cout << "[" << i + 1 << "] " << lista[i].getDia() << " | " << lista[i].getHoraInicio()
-             << " as " << lista[i].getHoraFim();
-        if (!lista[i].getResponsavelId().empty())
-            cout << " | " << lista[i].getResponsavelNome() << " <" << lista[i].getResponsavelId() << ">";
-        cout << endl;
-    }
+    listarReservasNumeradas(sala);
     int n = lerInt("Qual reserva deseja editar? (0 para cancelar): ");
     if (n == 0) { cout << "Edicao cancelada." << endl; return; }
     if (n < 1 || n > (int)lista.size()) { cout << "Numero de reserva invalido." << endl; return; }
@@ -278,5 +274,48 @@ void Menu::editarReserva() {
     } else {
         cout << "\n[ERRO DE CONFLITO] A sala " << codigo << " ja possui outra reserva em "
              << dia << " nesse intervalo." << endl;
+    }
+}
+
+// Mostra as reservas da sala numeradas a partir de 1 (usado na edicao e no cancelamento)
+void Menu::listarReservasNumeradas(const Sala* sala) const {
+    const auto& lista = sala->getReservas();
+    for (size_t i = 0; i < lista.size(); i++) {
+        cout << "[" << i + 1 << "] " << lista[i].getDia() << " | " << lista[i].getHoraInicio()
+             << " as " << lista[i].getHoraFim();
+        if (!lista[i].getResponsavelId().empty())
+            cout << " | " << lista[i].getResponsavelNome() << " <" << lista[i].getResponsavelId() << ">";
+        cout << endl;
+    }
+}
+
+void Menu::cancelarReserva() {
+    string codigo;
+    cout << "\nDigite o codigo da sala da reserva: ";
+    cin >> codigo;
+    Sala* sala = sistema.buscarSala(codigo);
+    if (sala == nullptr) {
+        cout << "Sala " << codigo << " nao encontrada." << endl;
+        return;
+    }
+    const auto& lista = sala->getReservas();
+    if (lista.empty()) {
+        cout << "A sala " << codigo << " nao tem reservas." << endl;
+        return;
+    }
+    listarReservasNumeradas(sala);
+
+    int n = lerInt("Qual reserva deseja cancelar? (0 para voltar): ");
+    if (n == 0) { cout << "Cancelamento abortado." << endl; return; }
+    if (n < 1 || n > (int)lista.size()) { cout << "Numero de reserva invalido." << endl; return; }
+
+    int confirma = lerInt("Confirmar o cancelamento? (1 para Sim, 0 para Nao): ");
+    if (confirma != 1) { cout << "Cancelamento abortado." << endl; return; }
+
+    if (sistema.removerReserva(codigo, n - 1)) {
+        cout << "\n[SUCESSO] Reserva cancelada na sala " << codigo << "." << endl;
+        repo.salvarReservas(sistema);
+    } else {
+        cout << "Erro ao cancelar a reserva." << endl;
     }
 }

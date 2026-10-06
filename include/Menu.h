@@ -22,6 +22,8 @@ private:
     void reservarSala();
     void editarSala();
     void editarReserva();
+    void cancelarReserva();
+    void listarReservasNumeradas(const Sala* sala) const;
 
 public:
     Menu(SistemaAlocacao& s, RepositorioCsv& r);

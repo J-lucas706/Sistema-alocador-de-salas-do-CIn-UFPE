@@ -193,7 +193,20 @@ static Resp tratar(const string& metodo, const string& caminho, const string& co
     }
 
     if (metodo == "DELETE" && caminho.rfind("/api/salas/", 0) == 0) {
-        string codigo = urlDecode(caminho.substr(11));
+        string resto = caminho.substr(11);
+        size_t p = resto.find("/reservas/");
+        if (p != string::npos) {  // DELETE /api/salas/{codigo}/reservas/{indice}  -> cancelar reserva
+            string codigoSala = urlDecode(resto.substr(0, p));
+            Sala* salaReserva = sis.buscarSala(codigoSala);
+            if (salaReserva == nullptr) return erro(404, "Sala " + codigoSala + " nao encontrada.");
+            int indice;
+            if (!lerInteiro(resto.substr(p + 10), indice) || indice < 0 || indice >= (int)salaReserva->getReservas().size())
+                return erro(404, "Reserva nao encontrada.");
+            sis.removerReserva(codigoSala, (size_t)indice);
+            repo.salvarReservas(sis);
+            return json(200, salaJson(salaReserva));
+        }
+        string codigo = urlDecode(resto);
         if (!sis.removerSala(codigo)) return erro(404, "Sala " + codigo + " nao encontrada.");
         repo.salvarSalas(sis);
         repo.salvarReservas(sis);  // a sala removida tinha reservas

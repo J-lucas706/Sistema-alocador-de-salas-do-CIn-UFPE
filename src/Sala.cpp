@@ -32,6 +32,12 @@ bool Sala::atualizarReserva(size_t indice, const Reserva& nova) {
     return true;
 }
 
+bool Sala::removerReserva(size_t indice) {
+    if (indice >= reservas.size()) return false;
+    reservas.erase(reservas.begin() + indice);
+    return true;
+}
+
 const vector<Reserva>& Sala::getReservas() const {
     return reservas;
 }
